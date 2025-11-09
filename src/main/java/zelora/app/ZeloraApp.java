@@ -1,5 +1,6 @@
 package zelora.app;
 
+import zelora.data.DatabaseConnection;
 import zelora.util.ZeloraBanner;
 
 import java.util.Scanner;
@@ -10,6 +11,9 @@ public class ZeloraApp {
 
     public static void main(String[] args) throws Exception {
         ZeloraBanner.printBanner();
+
+        DatabaseConnection.doConnection();
+        System.out.println("Database connection: true");
 
         boolean running = true;
         while (running) {
@@ -37,11 +41,60 @@ public class ZeloraApp {
                 System.err.println("Error: " + e.getMessage());
             }
         }
+
+        DatabaseConnection.closeConnection(); //Closing the connection when closing program (clicks EXIT).
+        System.out.println("Database connection closed.");
         System.out.println("\nGoodbye.");
     }
 
     private static void registerCustomer() throws Exception {
         System.out.println("\nToDo: Register a Customer\n");
+
+        //"Cin" all information about the new customer.
+        System.out.print("Name: ");
+        String name = sc.nextLine();
+
+        System.out.println("Surname: ");
+        String surname = sc.nextLine();
+
+        System.out.println("Email: ");
+        String email = sc.nextLine();
+
+        System.out.println("Password: ");
+        String password = sc.nextLine();
+        //Implement password encryption at some stage
+
+        System.out.println("Address: ");
+        String address = sc.nextLine();
+
+        System.out.println("City: ");
+        String city = sc.nextLine();
+
+        System.out.println("Phone: ");
+        String phone = sc.nextLine();
+
+        System.out.println("Date of Birth: (YYYY-MM-DD)");
+        String date = sc.nextLine();
+
+        //Insert to db
+        try {
+            int result = DatabaseConnection.runner.update(
+                    DatabaseConnection.connection,
+                    "INSERT INTO customers (first_name, last_name, email, password, address, city, phone_number, date_of_birth) VALUES (?,?,?,?,?,?,?,?)",
+                    name, surname, email, password, address, city, phone, date
+            );
+
+            if (result > 0) {
+                System.out.println("Customer added successfully!");
+            }
+        } catch (Exception e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+
+        //NOTE: Since we're not incrementing "customer_id" in the code i just set customer_id to auto increment in the database itself
+        //SQL Query BELOW;
+        //ALTER TABLE customers MODIFY customer_id INT AUTO_INCREMENT;
+
     }
 
     private static void displayCustomerProfile() throws Exception {
