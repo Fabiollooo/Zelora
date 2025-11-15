@@ -115,6 +115,34 @@ public class ZeloraApp {
 
     private static void displayCustomerProfile() throws Exception {
         System.out.println("\nToDo: Display Customer Profile\n");
+
+
+        System.out.println("Please enter your customer ID: ");
+        int customerID = sc.nextInt();
+        sc.nextLine();
+
+        String fetchUserData = "SELECT first_name, last_name, email, phone_number FROM customers WHERE customer_id = ?";
+        var stmt = DatabaseConnection.connection.prepareStatement(fetchUserData);
+        stmt.setInt(1, customerID);
+
+        var result = stmt.executeQuery();
+
+        //Check if the user was found or not
+        if (result.next()) {
+            System.out.println("Name: " + result.getString("first_name") + " " + result.getString("last_name"));
+            System.out.println("Email: " + result.getString("email"));
+            System.out.println("Phone: " + result.getString("phone_number"));
+            System.out.println(" ");
+        } else {
+            System.out.println("Customer not found!");
+        }
+
+        result.close();
+        stmt.close();
+
+        //Possibly add the following
+        //Optionally displaying related information such as any reviews left by the customer or any associated orders.
+
     }
 
     private static void dynamicProductQuery() throws Exception {
