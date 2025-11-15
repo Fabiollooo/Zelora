@@ -3,7 +3,10 @@ package zelora.app;
 import zelora.data.DatabaseConnection;
 import zelora.util.ZeloraBanner;
 
+import java.sql.SQLOutput;
 import java.util.Scanner;
+
+import org.mindrot.jbcrypt.BCrypt;
 
 
 public class ZeloraApp {
@@ -51,6 +54,8 @@ public class ZeloraApp {
         System.out.println("\nToDo: Register a Customer\n");
 
         //"Cin" all information about the new customer.
+        System.out.println("Please enter the following information");
+
         System.out.print("Name: ");
         String name = sc.nextLine();
 
@@ -60,9 +65,15 @@ public class ZeloraApp {
         System.out.println("Email: ");
         String email = sc.nextLine();
 
+        while (!email.contains("@") || email.startsWith("@") || email.endsWith("@")) {
+            System.out.println("Invalid email. Try again:");
+            email = sc.nextLine();
+        }
+
         System.out.println("Password: ");
         String password = sc.nextLine();
-        //Implement password encryption at some stage
+        String hashedpassword = BCrypt.hashpw(password, BCrypt.gensalt());
+
 
         System.out.println("Address: ");
         String address = sc.nextLine();
@@ -73,15 +84,20 @@ public class ZeloraApp {
         System.out.println("Phone: ");
         String phone = sc.nextLine();
 
-        System.out.println("Date of Birth: (YYYY-MM-DD)");
-        String date = sc.nextLine();
+        String date;
+        do {
+            System.out.println("Date of Birth (YYYY-MM-DD):");
+            date = sc.nextLine();
+        } while (!date.contains("-"));
+
+
 
         //Insert to db
         try {
             int result = DatabaseConnection.runner.update(
                     DatabaseConnection.connection,
                     "INSERT INTO customers (first_name, last_name, email, password, address, city, phone_number, date_of_birth) VALUES (?,?,?,?,?,?,?,?)",
-                    name, surname, email, password, address, city, phone, date
+                    name, surname, email, hashedpassword, address, city, phone, date
             );
 
             if (result > 0) {
