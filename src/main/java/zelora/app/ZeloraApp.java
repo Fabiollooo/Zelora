@@ -3,7 +3,9 @@ package zelora.app;
 import zelora.data.DatabaseConnection;
 import zelora.util.ZeloraBanner;
 
+import java.sql.ResultSet;
 import java.sql.SQLOutput;
+import java.sql.Statement;
 import java.util.Scanner;
 
 import org.mindrot.jbcrypt.BCrypt;
@@ -20,6 +22,7 @@ public class ZeloraApp {
 
         boolean running = true;
         while (running) {
+            System.out.println(" ");
             System.out.println("""
                     1) Register Customer
                     2) Display Customer Profile
@@ -56,12 +59,15 @@ public class ZeloraApp {
         //"Cin" all information about the new customer.
         System.out.println("Please enter the following information");
 
+        //Input for name
         System.out.print("Name: ");
         String name = sc.nextLine();
 
+        //Input for Surname
         System.out.println("Surname: ");
         String surname = sc.nextLine();
 
+        //Input for email
         System.out.println("Email: ");
         String email = sc.nextLine();
 
@@ -70,26 +76,48 @@ public class ZeloraApp {
             email = sc.nextLine();
         }
 
+        //Input for password
         System.out.println("Password: ");
         String password = sc.nextLine();
         String hashedpassword = BCrypt.hashpw(password, BCrypt.gensalt());
 
-
+        //Inpuit for address
         System.out.println("Address: ");
         String address = sc.nextLine();
 
+        //Input for city
         System.out.println("City: ");
         String city = sc.nextLine();
 
-        System.out.println("Phone: ");
-        String phone = sc.nextLine();
+        //Input for phone
+        String phone;
+        while(true){
+            System.out.println("Phone: ");
+            phone = sc.nextLine();
+            boolean valid = true;
 
+            for (int i = 0; i < phone.length(); i++) {
+                if (!Character.isDigit(phone.charAt(i))) {
+                    valid = false;
+                    break;
+                }
+            }
+
+            if (valid && phone.length() >= 7) {
+                break;
+            } else if (!valid) {
+                System.out.println("Invalid phone number! Only digits are allowed. Try again.");
+            } else {
+                System.out.println("Phone number too short! Must be at least 7 digits. Try again.");
+            }
+        }
+
+        //Input for DOB
         String date;
         do {
             System.out.println("Date of Birth (YYYY-MM-DD):");
             date = sc.nextLine();
         } while (!date.contains("-"));
-
 
 
         //Insert to db
@@ -107,7 +135,7 @@ public class ZeloraApp {
             System.out.println("Error: " + e.getMessage());
         }
 
-        //NOTE: Since we're not incrementing "customer_id" in the code i just set customer_id to auto increment in the database itself
+        //NOTE: Since we're not incrementing "customer_id" in the code I just set customer_id to auto increment in the database itself
         //SQL Query BELOW;
         //ALTER TABLE customers MODIFY customer_id INT AUTO_INCREMENT;
 
@@ -151,6 +179,33 @@ public class ZeloraApp {
 
     private static void displayAllCustomers() throws Exception {
         System.out.println("\nToDo: Display all Customers\n");
+
+        Statement stmt = DatabaseConnection.connection.createStatement();
+        ResultSet rs = stmt.executeQuery("SELECT * FROM customers");
+
+        int count = 0;
+
+        while (rs.next()){
+            count++;
+            System.out.println(" ");
+            System.out.println(count + "******************");
+            System.out.println("First Name: " + rs.getString("first_name"));
+            System.out.println("Last Name: " + rs.getString("last_name"));
+            System.out.println("Address: " + rs.getString("address"));
+            System.out.println("Email: " + rs.getString("email"));
+            System.out.println("Phone: " + rs.getString("phone_number"));
+            System.out.println("Date of Birth: " + rs.getString("date_of_birth"));
+            System.out.println("------------------");
+        }
+
+        System.out.println("Total Customers: " + count);
+        System.out.println();
+
+        rs.close();
+        stmt.close();
+
+        //Plan to add like a menu right after when all the customers are finished displaying saying something on the lines of "Do you wish to sort by x,y,z" if no then it would just bring the user back to the default option menu.
+
     }
 
     private static void seedDatabase() throws Exception {
