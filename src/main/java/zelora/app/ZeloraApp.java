@@ -48,7 +48,8 @@ public class ZeloraApp {
             }
         }
 
-        DatabaseConnection.closeConnection(); //Closing the connection when closing program (clicks EXIT).
+
+        DatabaseConnection.closeConnection(); //Closing the Connection when closing program (clicks EXIT).
         System.out.println("Database connection closed.");
         System.out.println("\nGoodbye.");
     }
