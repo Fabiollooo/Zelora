@@ -1,6 +1,7 @@
 package zelora.app;
 
 import org.apache.commons.dbutils.handlers.ColumnListHandler;
+import org.apache.commons.dbutils.handlers.ScalarHandler;
 import zelora.data.DatabaseConnection;
 import zelora.util.ZeloraBanner;
 
@@ -12,16 +13,28 @@ import java.util.Scanner;
 
 import org.mindrot.jbcrypt.BCrypt;
 import com.github.javafaker.Faker;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 
 public class ZeloraApp {
     private static final Scanner sc = new Scanner(System.in);
+    public static final String RESET = "\u001B[0m";
+    public static final String YELLOW = "\u001B[33m";
+
+    private static ExecutorService executor = Executors.newCachedThreadPool();
+    private static int previousCustomerCount = 0;
 
     public static void main(String[] args) throws Exception {
         ZeloraBanner.printBanner();
 
         DatabaseConnection.doConnection();
         System.out.println("Database connection: true");
+
+        startCustomerCounter();
+        startNewCustomerTracker();
+        startLowStockAlert();
 
         boolean running = true;
         while (running) {
@@ -51,7 +64,7 @@ public class ZeloraApp {
             }
         }
 
-
+        shutdownExecutor();
         DatabaseConnection.closeConnection(); //Closing the Connection when closing program (clicks EXIT).
         System.out.println("Database connection closed.");
         System.out.println("\nGoodbye.");
@@ -380,5 +393,102 @@ public class ZeloraApp {
 
     }
 
+
+
+    private static void startCustomerCounter() {
+        executor.submit(() -> {
+            while (true) {
+                try {
+                    Thread.sleep(60000);
+                    String sql = "SELECT COUNT(*) FROM customers";
+                    Long currentCount = DatabaseConnection.runner.query(DatabaseConnection.connection, sql, new ScalarHandler<Long>());
+
+                    System.out.println(YELLOW + "\n[Background Task 1] Total customers: " + currentCount + " - " + new java.util.Date() + RESET);
+
+
+                    previousCustomerCount = currentCount.intValue();
+
+                } catch (Exception e) {
+                    System.out.println("Customer counter error: " + e.getMessage());
+                }
+            }
+        });
+    }
+
+    private static void startNewCustomerTracker() {
+        executor.submit(() -> {
+            while (true) {
+                try {
+                    Thread.sleep(120000);
+                    String sql = "SELECT COUNT(*) FROM customers";
+                    Long currentCount = DatabaseConnection.runner.query(DatabaseConnection.connection, sql, new ScalarHandler<Long>());
+
+
+                    int newCustomers = 0;
+                    if (previousCustomerCount > 0) {
+                        newCustomers = currentCount.intValue() - previousCustomerCount;
+                    }
+
+                    if (newCustomers > 0) {
+                        System.out.println("\n\n**********Very Important and classified information**********");
+                        System.out.println(YELLOW + "[Background Task 2] New customers joined: +" + newCustomers + " - " + new java.util.Date() + RESET);
+                    }
+
+                } catch (Exception e) {
+                    System.out.println("New customer tracker error: " + e.getMessage());
+                }
+            }
+        });
+    }
+
+    private static void startLowStockAlert() {
+        executor.submit(() -> {
+            while (true) {
+                try {
+                    Thread.sleep(120000);
+
+                    var stmt = DatabaseConnection.connection.createStatement();
+                    ResultSet rs = stmt.executeQuery("SELECT inventory_id, product_id ,quantity_in_stock FROM inventory WHERE quantity_in_stock < 10");
+
+                    boolean foundLowStock = false;
+                    while (rs.next()) {
+                        if (!foundLowStock) {
+                            System.out.println(YELLOW + "\n[Background Task 3] LOW STOCK ALERT!" + RESET);
+                            foundLowStock = true;
+                        }
+                        String product = rs.getString("product_id");
+                        int stock = rs.getInt("quantity_in_stock");
+                        System.out.println("   - " + "Product ID" + product + ": Only " + stock + " left!");
+                    }
+
+                    if (!foundLowStock) {
+                        System.out.println("\n[Background Task 3] All products are well stocked!");
+                    }
+
+                    rs.close();
+                    stmt.close();
+
+                } catch (Exception e) {
+                    System.out.println("Stock alert error: " + e.getMessage());
+                }
+            }
+        });
+    }
+
+    private static void shutdownExecutor() {
+        try {
+            System.out.println("Attempting to shutdown background tasks...");
+            executor.shutdown();
+            executor.awaitTermination(5, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            System.err.println("Tasks interrupted: " + e);
+        } finally {
+            if (!executor.isTerminated()) {
+                System.err.println("Cancelling unfinished background tasks");
+            }
+            executor.shutdownNow();
+            System.out.println("Background tasks shutdown complete");
+        }
+    }
 }
 
