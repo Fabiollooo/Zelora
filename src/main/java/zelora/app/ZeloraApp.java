@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Scanner;
 
 import org.mindrot.jbcrypt.BCrypt;
+import com.github.javafaker.Faker;
 
 
 public class ZeloraApp {
@@ -226,18 +227,45 @@ public class ZeloraApp {
         int customerID = sc.nextInt();
         sc.nextLine();
 
-        String fetchUserData = "SELECT first_name, last_name, email, phone_number FROM customers WHERE customer_id = ?";
+        String fetchUserData = "SELECT first_name, last_name, email, phone_number, date_of_birth, city, communication_preferences, date_joined FROM customers WHERE customer_id = ?";
         var stmt = DatabaseConnection.connection.prepareStatement(fetchUserData);
         stmt.setInt(1, customerID);
-
         var result = stmt.executeQuery();
+
+        String reviewSQL = "SELECT * FROM reviews WHERE customer_id = ?";
+        var reviewStmt = DatabaseConnection.connection.prepareStatement(reviewSQL);
+        reviewStmt.setInt(1, customerID);
+        var reviewResult = reviewStmt.executeQuery();
 
         //Check if the user was found or not
         if (result.next()) {
-            System.out.println("Name: " + result.getString("first_name") + " " + result.getString("last_name"));
+            System.out.println("Name: " + result.getString("first_name"));
+            System.out.println("Last Name: " + result.getString("last_name"));
             System.out.println("Email: " + result.getString("email"));
             System.out.println("Phone: " + result.getString("phone_number"));
             System.out.println(" ");
+            System.out.println("Date of Birth: " + result.getString("date_of_birth") + "  (yyyy-mm-dd)");
+            System.out.println("City: " + result.getString("city"));
+            System.out.println("Communication preferance: " + result.getString("communication_preferences"));
+            System.out.println("Date joined: " + result.getString("date_joined"));
+
+            System.out.println("");
+            System.out.println("*************************");
+
+            System.out.println("--- Customer Reviews ---");
+            if (reviewResult.next()) {
+                do {
+                    System.out.println("Product ID: " + reviewResult.getString("product_id"));
+                    System.out.println("Review: " + reviewResult.getString("review_text"));
+                    System.out.println("Rating: " + reviewResult.getInt("rating") + "/5");
+                    System.out.println("Date: " + reviewResult.getString("review_date"));
+                    System.out.println("-------------------");
+                } while (reviewResult.next());
+            } else {
+                System.out.println("No reviews found for this customer.");
+            }
+
+
         } else {
             System.out.println("Customer not found!");
         }
@@ -246,7 +274,7 @@ public class ZeloraApp {
         stmt.close();
 
         //Possibly add the following
-        //Optionally displaying related information such as any reviews left by the customer or any associated orders.
+        //Optionally displaying any associated orders.
 
     }
 
@@ -287,6 +315,70 @@ public class ZeloraApp {
 
     private static void seedDatabase() throws Exception {
         System.out.println("\nToDo: Seed Database\n");
+
+        Faker faker = new Faker();
+        System.out.println("How many Users would you like to add to the database ?");
+        int noOfNewCustomers = sc.nextInt();
+        sc.nextLine();
+
+        int newCustomercount = 1;
+        for (int i = 0; i < noOfNewCustomers; i++) {
+            String firstName = faker.name().firstName();
+            String lastName = faker.name().lastName();
+            String email = faker.internet().emailAddress();
+            String password = faker.internet().password();
+            String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
+            String address = faker.address().streetAddress();
+            String city = faker.address().city();
+            String phone = faker.numerify("### #### ###");
+
+            String year = String.valueOf(faker.number().numberBetween(1950, 2005));
+            String month = String.format("%02d", faker.number().numberBetween(1, 12));
+            String day = String.format("%02d", faker.number().numberBetween(1, 28));
+            String dob = year + "-" + month + "-" + day;
+
+            String[] commPref = {"SMS", "Email", "Facebook", "Whatsapp", "Snapchat", "Instagram"};
+            String communicationPref = commPref[faker.number().numberBetween(0, 5)];
+
+            String joinYear = String.valueOf(faker.number().numberBetween(1999, 2024));
+            String joinMonth = String.format("%02d", faker.number().numberBetween(1, 12));
+            String joinDay = String.format("%02d", faker.number().numberBetween(1, 28));
+            String dateJoined = joinYear + "-" + joinMonth + "-" + joinDay;
+
+            String[] vipLevels = {"Bronze", "Silver", "Gold", "Platinum"};
+            String vipStatus = vipLevels[faker.number().numberBetween(0, 3)];
+
+            String[] paymentMethods = {"PayPal", "Credit Card", "Stripe", "Debit Card"};
+            String paymentInfo = paymentMethods[faker.number().numberBetween(0, 3)];
+
+            System.out.println("");
+                System.out.println(newCustomercount + "--------------------");
+                System.out.println("First Name: " + firstName);
+                System.out.println("Last Name: " + lastName);
+                System.out.println("Email: " + email);
+                System.out.println("Password: " + password);
+                System.out.println("Address: " + address);
+                System.out.println("City: " + city);
+                System.out.println("Phone: " + phone);
+                System.out.println("Date of Birth: " + dob);
+                System.out.println("Communication Pref: " + communicationPref);
+                System.out.println("Date Joined: " + dateJoined);
+                System.out.println("VIP Status: " + vipStatus);
+                System.out.println("Payment Info: " + paymentInfo);
+
+                newCustomercount++;
+                System.out.println("");
+            System.out.println("***********************");
+
+            DatabaseConnection.runner.update(
+                    DatabaseConnection.connection,
+                    "INSERT INTO customers (first_name, last_name, email, password, address, city, phone_number, date_of_birth, communication_preferences, date_joined, vip_status, payment_info) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                    firstName, lastName, email, hashedPassword, address, city, phone, dob, communicationPref, dateJoined, vipStatus, paymentInfo
+            );
+        }
+        System.out.println("Database seeded with " + noOfNewCustomers + " sample customers!");
+
     }
 
 }
+
