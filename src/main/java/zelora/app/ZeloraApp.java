@@ -1,11 +1,13 @@
 package zelora.app;
 
+import org.apache.commons.dbutils.handlers.ColumnListHandler;
 import zelora.data.DatabaseConnection;
 import zelora.util.ZeloraBanner;
 
 import java.sql.ResultSet;
 import java.sql.SQLOutput;
 import java.sql.Statement;
+import java.util.List;
 import java.util.Scanner;
 
 import org.mindrot.jbcrypt.BCrypt;
@@ -58,70 +60,144 @@ public class ZeloraApp {
         System.out.println("\nToDo: Register a Customer\n");
 
         //"Cin" all information about the new customer.
-        System.out.println("Please enter the following information");
+            System.out.println("Please enter the following information");
 
         //Input for name
-        System.out.print("Name: ");
-        String name = sc.nextLine();
+            String name;
+                while(true) {
+                    System.out.print("First name: ");
+                    name = sc.nextLine();
+
+                    if(!name.isEmpty()){
+                        break;
+                    }
+
+                    System.out.println("You didn't type in anything, please try again.");
+
+                }
+
+
 
         //Input for Surname
-        System.out.println("Surname: ");
-        String surname = sc.nextLine();
+            String surname;
+                while(true) {
+                    System.out.println("Surname: ");
+                    surname = sc.nextLine();
+
+                    if(!surname.isEmpty()){
+                        break;
+                    }
+                    System.out.println("You didn't type in anything, please try again.");
+                }
+
+
 
         //Input for email
-        System.out.println("Email: ");
-        String email = sc.nextLine();
+            String email;
+                while(true) {
+                    System.out.println("Email: ");
+                    email = sc.nextLine();
 
-        while (!email.contains("@") || email.startsWith("@") || email.endsWith("@")) {
-            System.out.println("Invalid email. Try again:");
-            email = sc.nextLine();
-        }
+                    while (!email.contains("@") || email.startsWith("@") || email.endsWith("@")) {
+                        System.out.println("Invalid email. Try again:");
+                        email = sc.nextLine();
+                    }
+
+                    String checkEmailsql = "SELECT email FROM customers WHERE email = ? ";
+                    List<String> emails = DatabaseConnection.runner.query(DatabaseConnection.connection, checkEmailsql, new ColumnListHandler<String>(), email);
+
+                    if(!email.isEmpty()){
+                        break;
+                    }
+                    System.out.println("You didn't type in anything, please try again.");
+
+                }
+
+
+
 
         //Input for password
-        System.out.println("Password: ");
-        String password = sc.nextLine();
-        String hashedpassword = BCrypt.hashpw(password, BCrypt.gensalt());
+            String password;
+                while(true) {
+                    System.out.println("Password: ");
+                    password = sc.nextLine();
 
-        //Inpuit for address
-        System.out.println("Address: ");
-        String address = sc.nextLine();
+                    if (password.length() < 5){
+                        System.out.println("Password must be less than 5 characters.");
+                        continue;
+                    }
 
-        //Input for city
-        System.out.println("City: ");
-        String city = sc.nextLine();
-
-        //Input for phone
-        String phone;
-        while(true){
-            System.out.println("Phone: ");
-            phone = sc.nextLine();
-            boolean valid = true;
-
-            for (int i = 0; i < phone.length(); i++) {
-                if (!Character.isDigit(phone.charAt(i))) {
-                    valid = false;
                     break;
                 }
-            }
+                String hashedpassword = BCrypt.hashpw(password, BCrypt.gensalt());
 
-            if (valid && phone.length() >= 7) {
-                break;
-            } else if (!valid) {
-                System.out.println("Invalid phone number! Only digits are allowed. Try again.");
-            } else {
-                System.out.println("Phone number too short! Must be at least 7 digits. Try again.");
-            }
-        }
+
+        //Input for address
+            String address;
+                while(true) {
+                    System.out.println("Address: ");
+                    address = sc.nextLine();
+
+                    if (!address.isEmpty()) {
+                        break;
+                    }
+                    System.out.println("You didn't type in anything, please try again.");
+
+                }
+
+        //Input for city
+            String city;
+                while(true) {
+                    System.out.println("City: ");
+                    city = sc.nextLine();
+
+                    if(!city.isEmpty()){
+                       break;
+                    }
+                    System.out.println("You didn't type in anything, please try again.");
+                }
+
+
+        //Input for phone
+            String phone;
+                while(true){
+                    System.out.println("Phone: ");
+                    phone = sc.nextLine();
+
+                    if(phone.isEmpty()){
+                        System.out.println("Please enter a valid phone number.");
+                    }
+
+                    boolean valid = true;
+
+                    for (int i = 0; i < phone.length(); i++) {
+                        if (!Character.isDigit(phone.charAt(i))) {
+                            valid = false;
+                            break;
+                        }
+                    }
+
+                    if (valid && phone.length() >= 7) {
+                        break;
+                    } else if (!valid) {
+                        System.out.println("Invalid phone number! Only digits are allowed. Try again.");
+                    } else {
+                        System.out.println("Phone number too short! Must be at least 7 digits. Try again.");
+                    }
+
+
+                }
 
         //Input for DOB
-        String date;
-        do {
-            System.out.println("Date of Birth (YYYY-MM-DD):");
-            date = sc.nextLine();
-        } while (!date.contains("-"));
+            String date;
+            do {
+                System.out.println("Date of Birth (YYYY-MM-DD):");
+                date = sc.nextLine();
+            } while (!date.contains("-"));
 
 
-        //Insert to db
+
+    //Insertion to db
         try {
             int result = DatabaseConnection.runner.update(
                     DatabaseConnection.connection,
