@@ -1,13 +1,19 @@
 package zelora.app;
 
+import com.opencsv.bean.StatefulBeanToCsv;
+import com.opencsv.bean.StatefulBeanToCsvBuilder;
 import org.apache.commons.dbutils.handlers.ColumnListHandler;
 import org.apache.commons.dbutils.handlers.ScalarHandler;
 import zelora.data.DatabaseConnection;
+import zelora.model.Product;
 import zelora.util.ZeloraBanner;
 
+import java.io.FileWriter;
+import java.io.Writer;
 import java.sql.ResultSet;
 import java.sql.SQLOutput;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
@@ -85,11 +91,9 @@ public class ZeloraApp {
                     if(!name.isEmpty()){
                         break;
                     }
-
                     System.out.println("You didn't type in anything, please try again.");
 
                 }
-
 
 
         //Input for Surname
@@ -102,8 +106,8 @@ public class ZeloraApp {
                         break;
                     }
                     System.out.println("You didn't type in anything, please try again.");
-                }
 
+                }
 
 
         //Input for email
@@ -126,9 +130,6 @@ public class ZeloraApp {
                     System.out.println("You didn't type in anything, please try again.");
 
                 }
-
-
-
 
         //Input for password
             String password;
@@ -199,7 +200,6 @@ public class ZeloraApp {
                         System.out.println("Phone number too short! Must be at least 7 digits. Try again.");
                     }
 
-
                 }
 
         //Input for DOB
@@ -211,20 +211,20 @@ public class ZeloraApp {
 
 
 
-    //Insertion to db
-        try {
-            int result = DatabaseConnection.runner.update(
-                    DatabaseConnection.connection,
-                    "INSERT INTO customers (first_name, last_name, email, password, address, city, phone_number, date_of_birth) VALUES (?,?,?,?,?,?,?,?)",
-                    name, surname, email, hashedpassword, address, city, phone, date
-            );
+        //Insertion to db
+            try {
+                int result = DatabaseConnection.runner.update(
+                        DatabaseConnection.connection,
+                        "INSERT INTO customers (first_name, last_name, email, password, address, city, phone_number, date_of_birth) VALUES (?,?,?,?,?,?,?,?)",
+                        name, surname, email, hashedpassword, address, city, phone, date
+                );
 
-            if (result > 0) {
-                System.out.println("Customer added successfully!");
+                if (result > 0) {
+                    System.out.println("Customer added successfully!");
+                }
+            } catch (Exception e) {
+                System.out.println("Error: " + e.getMessage());
             }
-        } catch (Exception e) {
-            System.out.println("Error: " + e.getMessage());
-        }
 
         //NOTE: Since we're not incrementing "customer_id" in the code I just set customer_id to auto increment in the database itself
         //SQL Query BELOW;
@@ -286,20 +286,79 @@ public class ZeloraApp {
         result.close();
         stmt.close();
 
-        //Possibly add the following
-        //Optionally displaying any associated orders.
-
     }
 
     private static void dynamicProductQuery() throws Exception {
         System.out.println("\nToDo: Create Dynamic Query\n");
+
+        System.out.println("Available columns: product_id, product_name, description, category_id, price, size, colour, material, sustainability_rating, manufacturer, release_date, discounted_price, supplier_Id");
+        System.out.println("Enter columns that you want to display (seperate each by comma please)");
+        String columnsInput =  sc.nextLine().trim();
+
+        String columns = columnsInput.isEmpty() ? "product_id, product_name, price" : columnsInput;
+
+        String sql = "SELECT " + columns + " FROM products";
+
+        var stmt = DatabaseConnection.connection.createStatement();
+        var rs = stmt.executeQuery(sql);
+
+        System.out.println("\nSearch Results:");
+        while (rs.next()) {
+            String[] selectedColumns = columns.split(",");
+            for (String columnName : selectedColumns) {
+                String cleanColumnName = columnName.trim();
+                System.out.print(cleanColumnName + ": " + rs.getString(cleanColumnName) + " | ");
+            }
+            System.out.println();
+        }
+
+        System.out.print("\nExport to CSV? (y/n): ");
+        if (sc.nextLine().equalsIgnoreCase("y")) {
+
+            try (FileWriter csvWriter = new FileWriter("products.csv")) {
+                csvWriter.write(columns + "\n");
+                var resultSetForExport = stmt.executeQuery(sql);
+                while (resultSetForExport.next()) {
+                    String[] exportColumns = columns.split(",");
+
+                    for (int columnIndex = 0; columnIndex < exportColumns.length; columnIndex++) {
+                        String currentColumn = exportColumns[columnIndex].trim();
+                        csvWriter.write(resultSetForExport.getString(currentColumn));
+                        if (columnIndex < exportColumns.length - 1) csvWriter.write(",");
+                    }
+                    csvWriter.write("\n");
+                }
+            }
+            System.out.println("Exported to products.csv");
+        }
+
+        stmt.close();
+
     }
 
     private static void displayAllCustomers() throws Exception {
         System.out.println("\nToDo: Display all Customers\n");
 
+        System.out.println("Do you wish to Sort by:");
+        System.out.println("1) Default order");
+        System.out.println("2) Alphabetically (by first name)");
+        System.out.println("3) VIP Status");
+        System.out.print("Choose: ");
+        String sortChoice = sc.nextLine();
+
+        String sql = "SELECT * FROM customers";
+        switch (sortChoice) {
+            case "2":
+                sql += " ORDER BY first_name ASC";
+                break;
+            case "3":
+                sql += " ORDER BY vip_status ASC";
+                break;
+
+        }
+
         Statement stmt = DatabaseConnection.connection.createStatement();
-        ResultSet rs = stmt.executeQuery("SELECT * FROM customers");
+        ResultSet rs = stmt.executeQuery(sql);
 
         int count = 0;
 
@@ -309,9 +368,11 @@ public class ZeloraApp {
             System.out.println(count + "******************");
             System.out.println("First Name: " + rs.getString("first_name"));
             System.out.println("Last Name: " + rs.getString("last_name"));
+            System.out.println("Customer ID: " + rs.getString("customer_id"));
             System.out.println("Address: " + rs.getString("address"));
             System.out.println("Email: " + rs.getString("email"));
             System.out.println("Phone: " + rs.getString("phone_number"));
+            System.out.println("VIP status: " + rs.getString("vip_status"));
             System.out.println("Date of Birth: " + rs.getString("date_of_birth"));
             System.out.println("------------------");
         }
@@ -322,7 +383,7 @@ public class ZeloraApp {
         rs.close();
         stmt.close();
 
-        //Plan to add like a menu right after when all the customers are finished displaying saying something on the lines of "Do you wish to sort by x,y,z" if no then it would just bring the user back to the default option menu.
+
 
     }
 
@@ -392,8 +453,6 @@ public class ZeloraApp {
         System.out.println("Database seeded with " + noOfNewCustomers + " sample customers!");
 
     }
-
-
 
     private static void startCustomerCounter() {
         executor.submit(() -> {
