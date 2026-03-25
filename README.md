@@ -31,7 +31,7 @@ Zelora is a Java-based desktop application that manages a complete retail operat
 1. **Open project in IntelliJ**:
    - Launch IntelliJ IDEA
    - Click "File" → "Open"
-   - Select the `Zelora-main` folder and click "Open as Project"
+   - Select the `Zelora` folder and click "Open as Project"
    - Wait for Maven to index and download dependencies
 
 2. **Create database** - Import the SQL file to create the database and tables:
